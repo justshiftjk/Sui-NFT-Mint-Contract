@@ -121,7 +121,17 @@ module mfs_nft::nft {
 
     /// Anyone can mint their `Hero`!
     #[allow(lint(self_transfer))] // Suppress the self_transfer lint here
-    public fun mint(shop: &mut Treasury, payment: &mut Coin<SUI>, clock: &Clock, name: String, image_url: String, ctx: &mut TxContext) {
+    public fun mint(
+        shop: &mut Treasury,
+        payment: &mut Coin<SUI>,
+        clock: &Clock,
+        name: String,
+        image_url: String,
+        description: String,
+        arg3: vector<0x1::ascii::String>,
+        arg4: vector<0x1::ascii::String>,
+        ctx: &mut TxContext
+    ) {
         let current_time = clock.timestamp_ms();
         assert!(current_time >= PHASE_ONE_TIME, 1001);
         if (current_time >= PHASE_THREE_TIME && current_time < PHASE_FOUR_TIME) {
@@ -132,17 +142,18 @@ module mfs_nft::nft {
             shop.price = PHASE_THREE_PRICE;
         };
 
-        assert!(coin::value(payment) >= shop.price, 1002);
-
-        // Take amount = `shop.price` from Coin<SUI>
-        let coin_balance = coin::balance_mut(payment);
-        let mut paid = balance::split(coin_balance, shop.price);
-        let profits = coin::take(&mut paid, shop.price, ctx);
-
-        transfer::public_transfer(profits, TREASURY_WALLET);
-        // Put the coin to the Treasury's balance
-        balance::join(&mut shop.balance, paid);
-
+        if (current_time >= PHASE_THREE_TIME) {
+            assert!(coin::value(payment) >= shop.price, 1002);
+            // Take amount = `shop.price` from Coin<SUI>
+            let coin_balance = coin::balance_mut(payment);
+            let mut paid = balance::split(coin_balance, shop.price);
+            let profits = coin::take(&mut paid, shop.price, ctx);
+            transfer::public_transfer(profits, TREASURY_WALLET);
+            
+            // Put the coin to the Treasury's balance
+            balance::join(&mut shop.balance, paid);
+        };
+        
         let id = object::new(ctx);
         let nft = Hero {
             id:id,
