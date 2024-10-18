@@ -28,22 +28,15 @@ module mfs_nft::nft {
         name: string::String,
     }
 
-    public struct Counter has key, store {
-        id: UID,
-        mint_count: u64
-    }
-
     /// Constant to define the start time for minting (in milliseconds).
     /// Replace this with the appropriate timestamp.
     const MINT_START_TIME: u64 = 1697664000000; // Example: 2023-10-01 00:00:00 UTC
+    const WL_START_TIME: u64 = 1700000000000; // Example: 2023-10-01 00:00:00 UTC
+    const PUBLIC_START_TIME: u64 = 1750000000000; // Example: 2023-10-01 00:00:00 UTC
 
-    /// Function to initialize the MintCounter when the contract is deployed.
-    public fun init_counter(ctx: &mut TxContext): Counter {
-        return Counter {
-            id: object::new(ctx),
-            mint_count: 0
-        }
-    }
+    const PHASE_ONE_PRICE: u64 = 10;
+    const PHASE_TWO_PRICE: u64 = 20;
+    const PHASE_THREE_PRICE: u64 = 30;
 
     /// In the module initializer one claims the `Publisher` object
     /// to then create a `Display`. The `Display` is initialized with
@@ -95,8 +88,17 @@ module mfs_nft::nft {
     /// Anyone can mint their `Hero`!
     public fun mint(clock: &Clock, name: String, image_url: String, ctx: &mut TxContext) {
         let current_time = clock.timestamp_ms();
-        assert!(current_time >= MINT_START_TIME, 1001); // Error if already initialized
+        assert!(current_time >= MINT_START_TIME, 1001);
+        let mut mint_price: u64 = 0;
         
+        if (current_time > MINT_START_TIME && current_time < WL_START_TIME) {
+            mint_price = PHASE_ONE_PRICE;
+        } else if (current_time > WL_START_TIME && current_time < PUBLIC_START_TIME) {
+            mint_price = PHASE_TWO_PRICE;
+        } else if (current_time > PUBLIC_START_TIME) {
+            mint_price = PHASE_THREE_PRICE;
+        };
+
         let id = object::new(ctx);
         let nft = Hero { id, name, image_url };
         let sender = tx_context::sender(ctx);
