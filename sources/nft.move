@@ -112,7 +112,14 @@ module mfs_nft::nft {
 
     /// Anyone can mint their `Hero`!
     #[allow(lint(self_transfer))] // Suppress the self_transfer lint here
-    public fun mint(shop: &mut Treasury, payment: &mut Coin<SUI>, clock: &Clock, name: String, image_url: String, ctx: &mut TxContext) {
+    public fun mint(
+        shop: &mut Treasury,
+        payment: &mut Coin<SUI>,
+        clock: &Clock,
+        name: String,
+        image_url: String,
+        ctx: &mut TxContext
+    ) {
         let current_time = clock.timestamp_ms();
         assert!(current_time >= MINT_START_TIME, 1001);
 
