@@ -1,5 +1,8 @@
 
 module mfs_nft::nft {
+    use sui::sui::SUI;
+    use sui::coin::{Self, Coin};
+    use sui::balance::{Self, Balance};
     use sui::tx_context::{sender};
     use std::string::{utf8, String};
 
@@ -9,6 +12,7 @@ module mfs_nft::nft {
     use sui::event;
     use sui::clock::Clock;
     use std::string;
+
     /// The Hero - an outstanding collection of digital art.
     public struct Hero has key, store {
         id: UID,
@@ -28,15 +32,26 @@ module mfs_nft::nft {
         name: string::String,
     }
 
+    /// Capability that grants an owner the right to collect profits.
+    public struct TreasuryOwnerCap has key { id: UID }
+
+    public struct Treasury has key {
+        id: UID,
+        price: u64,
+        balance: Balance<SUI>
+    }
+
     /// Constant to define the start time for minting (in milliseconds).
     /// Replace this with the appropriate timestamp.
-    const MINT_START_TIME: u64 = 1697664000000; // Example: 2023-10-01 00:00:00 UTC
-    const WL_START_TIME: u64 = 1700000000000; // Example: 2023-10-01 00:00:00 UTC
-    const PUBLIC_START_TIME: u64 = 1750000000000; // Example: 2023-10-01 00:00:00 UTC
+    const MINT_START_TIME: u64 = 1677664000000; // Example: 2023-10-01 00:00:00 UTC
+    const WL_START_TIME: u64 = 1687664000000; // Example: 2023-10-01 00:00:00 UTC
+    const PUBLIC_START_TIME: u64 = 1697664000000; // Example: 2023-10-01 00:00:00 UTC
 
-    const PHASE_ONE_PRICE: u64 = 10;
-    const PHASE_TWO_PRICE: u64 = 20;
-    const PHASE_THREE_PRICE: u64 = 30;
+    const PHASE_ONE_PRICE: u64 = 100000000;
+    const PHASE_TWO_PRICE: u64 = 200000000;
+    const PHASE_THREE_PRICE: u64 = 300000000;
+
+    const TREASURY_WALLET: address = @0xa7ae4f7d7297c609d5c115ec6a4b516dfe222d6e40d020a9e81ec189078d646e;
 
     /// In the module initializer one claims the `Publisher` object
     /// to then create a `Display`. The `Display` is initialized with
@@ -83,21 +98,42 @@ module mfs_nft::nft {
 
         transfer::public_transfer(publisher, sender(ctx));
         transfer::public_transfer(display, sender(ctx));
+
+        transfer::transfer(TreasuryOwnerCap {
+            id: object::new(ctx)
+        }, tx_context::sender(ctx));
+
+        transfer::share_object(Treasury {
+            id: object::new(ctx),
+            price: 1,
+            balance: balance::zero()
+        })
     }
 
     /// Anyone can mint their `Hero`!
-    public fun mint(clock: &Clock, name: String, image_url: String, ctx: &mut TxContext) {
+    #[allow(lint(self_transfer))] // Suppress the self_transfer lint here
+    public fun mint(shop: &mut Treasury, payment: &mut Coin<SUI>, clock: &Clock, name: String, image_url: String, ctx: &mut TxContext) {
         let current_time = clock.timestamp_ms();
         assert!(current_time >= MINT_START_TIME, 1001);
-        let mut mint_price: u64 = 0;
-        
+
         if (current_time > MINT_START_TIME && current_time < WL_START_TIME) {
-            mint_price = PHASE_ONE_PRICE;
+            shop.price = PHASE_ONE_PRICE;
         } else if (current_time > WL_START_TIME && current_time < PUBLIC_START_TIME) {
-            mint_price = PHASE_TWO_PRICE;
+            shop.price = PHASE_TWO_PRICE;
         } else if (current_time > PUBLIC_START_TIME) {
-            mint_price = PHASE_THREE_PRICE;
+            shop.price = PHASE_THREE_PRICE;
         };
+
+        assert!(coin::value(payment) >= shop.price, 1002);
+
+        // Take amount = `shop.price` from Coin<SUI>
+        let coin_balance = coin::balance_mut(payment);
+        let mut paid = balance::split(coin_balance, shop.price);
+        let profits = coin::take(&mut paid, shop.price, ctx);
+
+        transfer::public_transfer(profits, TREASURY_WALLET);
+        // Put the coin to the Treasury's balance
+        balance::join(&mut shop.balance, paid);
 
         let id = object::new(ctx);
         let nft = Hero { id, name, image_url };
