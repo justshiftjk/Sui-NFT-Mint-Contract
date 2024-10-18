@@ -132,6 +132,7 @@ module mfs_nft::nft {
         let profits = coin::take(&mut paid, shop.price, ctx);
 
         transfer::public_transfer(profits, TREASURY_WALLET);
+
         // Put the coin to the Treasury's balance
         balance::join(&mut shop.balance, paid);
 
