@@ -4,6 +4,7 @@ module mfs_nft::nft {
     use sui::balance::{Self, Balance};
     use sui::tx_context::{sender};
     use std::string::{utf8, String};
+    // use std::debug;
     // The creator bundle: these two packages often go together.
     use sui::package;
     use sui::display;
@@ -31,6 +32,11 @@ module mfs_nft::nft {
         // The name of the NFT
         name: string::String,
     }
+
+    // public struct ShowTime has copy, drop {
+    //     time: u64
+    // }
+
     /// Capability that grants an owner the right to collect profits.
     public struct TreasuryOwnerCap has key { id: UID }
     public struct Treasury has key {
@@ -40,14 +46,14 @@ module mfs_nft::nft {
     }
     /// Constant to define the start time for minting (in milliseconds).
     /// Replace this with the appropriate timestamp.
-    const PHASE_ONE_TIME: u64 = 1729288800000; // Example: 2024-10-18 22:00:00 UTC
-    // const PHASE_TWO_TIME: u64 = 1687664000000; 
-    const PHASE_THREE_TIME: u64 = 1687664000000; 
-    const PHASE_FOUR_TIME: u64 = 1687664000000; 
-    const PHASE_FIVE_TIME: u64 = 1687664000000; 
-    const PHASE_ONE_PRICE: u64 = 5550000000;
-    const PHASE_TWO_PRICE: u64 = 7770000000;
-    const PHASE_THREE_PRICE: u64 = 11100000000;
+    const PHASE_ONE_TIME: u64 = 1729459800000; // Example: 2024-10-18 22:00:00 UTC
+    // const PHASE_TWO_TIME: u64 = 1729368900000; 
+    const PHASE_THREE_TIME: u64 = 1729460400000; 
+    const PHASE_FOUR_TIME: u64 = 1729461000000; 
+    const PHASE_FIVE_TIME: u64 = 1729461600000; 
+    const PHASE_ONE_PRICE: u64 = 1110000000;
+    const PHASE_TWO_PRICE: u64 = 2220000000;
+    const PHASE_THREE_PRICE: u64 = 3330000000;
 
     //TREASURY ADDY
     const TREASURY_WALLET: address = @0xa7ae4f7d7297c609d5c115ec6a4b516dfe222d6e40d020a9e81ec189078d646e;
@@ -134,6 +140,7 @@ module mfs_nft::nft {
     ) {
         let current_time = clock.timestamp_ms();
         assert!(current_time >= PHASE_ONE_TIME, 1001);
+        
         if (current_time >= PHASE_THREE_TIME && current_time < PHASE_FOUR_TIME) {
             shop.price = PHASE_ONE_PRICE;
         } else if (current_time >= PHASE_FOUR_TIME && current_time < PHASE_FIVE_TIME) {
@@ -169,4 +176,16 @@ module mfs_nft::nft {
         });
         transfer::public_transfer(nft, sender);
     }
+
+    // entry fun show_time(
+    //     clock: &Clock,
+    //     _ctx: &mut TxContext
+    // ): u64 {
+    //     let current_time: u64 = clock.timestamp_ms();
+    //     debug::print(&current_time);
+    //     event::emit(ShowTime {
+    //         time: current_time
+    //     });
+    //     current_time
+    // }
 }
